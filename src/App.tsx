@@ -59,11 +59,10 @@ function App() {
   const updateProjects = (projects: Project[]) => {
     setResumeData(prev => ({ ...prev, projects }));
   };
-
   const handleDownloadPDF = async () => {
     try {
       setIsGeneratingPDF(true);
-      await generatePDF('resume-preview', `${resumeData.personalInfo.name || 'resume'}.pdf`);
+      await generatePDF(resumeData, `${resumeData.personalInfo.name || 'resume'}.pdf`);
     } catch (error) {
       console.error('Error generating PDF:', error);
       alert('Failed to generate PDF. Please try again.');

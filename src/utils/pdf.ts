@@ -2,20 +2,41 @@ import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 import { ResumeData } from '@/types/resume';
 import { downloadFile } from '@/utils';
+import { createRoot } from 'react-dom/client';
+import { ResumePDFPreview } from '@/components/ResumePDFPreview';
+import { createElement } from 'react';
 
-export async function generatePDF(elementId: string, filename: string = 'resume.pdf'): Promise<void> {
+export async function generatePDF(resumeData: ResumeData, filename: string = 'resume.pdf'): Promise<void> {
   try {
-    const element = document.getElementById(elementId);
-    if (!element) {
-      throw new Error('Resume preview element not found');
-    }
+    // Create a temporary container for PDF rendering
+    const tempContainer = document.createElement('div');
+    tempContainer.style.position = 'absolute';
+    tempContainer.style.left = '-9999px';
+    tempContainer.style.top = '-9999px';
+    tempContainer.style.width = '800px';
+    tempContainer.style.backgroundColor = '#ffffff';
+    tempContainer.id = 'pdf-resume-container';
+    document.body.appendChild(tempContainer);
 
-    // Create canvas from the resume preview
-    const canvas = await html2canvas(element, {
+    // Render the PDF-friendly component
+    const root = createRoot(tempContainer);
+    const pdfComponent = createElement(ResumePDFPreview, { data: resumeData });
+    
+    // Render and wait for completion
+    await new Promise<void>((resolve) => {
+      root.render(pdfComponent);
+      // Give React time to render
+      setTimeout(resolve, 100);
+    });
+
+    // Create canvas from the PDF-friendly preview
+    const canvas = await html2canvas(tempContainer, {
       scale: 2,
       useCORS: true,
       allowTaint: true,
       backgroundColor: '#ffffff',
+      width: 800,
+      windowWidth: 800,
     });
 
     // Calculate dimensions
@@ -38,6 +59,10 @@ export async function generatePDF(elementId: string, filename: string = 'resume.
       pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, position, imgWidth, imgHeight);
       heightLeft -= pageHeight;
     }
+
+    // Clean up
+    root.unmount();
+    document.body.removeChild(tempContainer);
 
     // Download the PDF
     const pdfBlob = pdf.output('blob');
